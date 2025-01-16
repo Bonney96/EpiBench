@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Methylation Prediction Report</title>
+<style>
+body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    background-color: #f7f7f7;
+}
+header {
+    background: #4a90e2;
+    padding: 20px;
+    color: #fff;
+    text-align: center;
+}
+h1, h2, h3, h4 {
+    font-weight: 500;
+    color: #333;
+}
+.container {
+    display: flex;
+}
+.sidebar {
+    width: 220px;
+    background: #2c3e50;
+    color: #fff;
+    padding: 20px;
+    position: fixed;
+    top: 64px; /* header height */
+    bottom: 0;
+    overflow-y: auto;
+}
+.sidebar h2 {
+    font-size: 1.1em;
+    margin-top: 0;
+}
+.sidebar a {
+    display: block;
+    color: #ecf0f1;
+    text-decoration: none;
+    margin: 10px 0;
+    font-size: 0.95em;
+}
+.sidebar a:hover {
+    text-decoration: underline;
+}
+.content {
+    margin-left: 240px;
+    padding: 40px;
+    max-width: 1200px;
+}
+.metric-table {
+    border-collapse: collapse;
+    margin: 20px 0;
+    width: 100%;
+    background: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.metric-table th, .metric-table td {
+    border: 1px solid #eee;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 0.95em;
+}
+.metric-table th {
+    background-color: #f0f0f0;
+    font-weight: 600;
+}
+.plot-img {
+    max-width: 600px;
+    height: auto;
+    display: block;
+    margin: 20px 0;
+    border: 1px solid #ccc;
+    background: #fff;
+    padding: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.feature-dists {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    margin: 20px 0;
+}
+.feature-dist-block {
+    background: #fff;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    flex: 0 0 auto;
+}
+.feature-img {
+    max-width: 250px; /* slightly smaller for grid layout */
+}
+.feature-dist-block h4 {
+    margin-top: 0;
+    font-size: 1em;
+}
+.interactive-link {
+    color: #2c3e50;
+    font-weight: 600;
+}
+.motif-logos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    margin: 20px 0;
+}
+.motif-logo-block {
+    background: #fff;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.motif-img {
+    max-width: 300px;
+}
+section {
+    margin-bottom: 60px;
+}
+p {
+    line-height: 1.6em;
+}
+</style>
+</head>
+<body>
+<header>
+    <h1>Methylation Prediction Report</h1>
+    <p style="margin:0;font-size:1.1em;">A comprehensive overview of regression and classification models, data exploration, explainability, and motif discovery.</p>
+</header>
+<div class="container">
+    <div class="sidebar">
+        <h2>Navigation</h2>
+        <a href="#data-exploration">Data Exploration</a>
+        <a href="#regression-performance">Regression Performance</a>
+        <a href="#classification-performance">Classification Performance</a>
+        <a href="#explainability">Explainability (IG)</a>
+        <a href="#motif-discovery">Motif Discovery</a>
+        <a href="#kernel-motif-discovery">Motif Discovery by Kernel Size</a>
+    </div>
+    <div class="content">
+        <section>
+            <p>
+            This report presents a comprehensive overview of our analysis pipeline, including data and feature exploration, regression and classification modeling for methylation prediction, integrated gradients-based explainability, and motif discovery (both general and kernel-specific).
+            </p>
+        </section>
+
+        <h2 id='data-exploration'>Data and Feature Exploration</h2><p>This section provides insights into the relationships between features and methylation score, including correlation heatmaps and feature distributions. We also show stratified views by hypermethylated (>0.5) and hypomethylated (≤0.5) groups.</p><h3>Feature Correlation Heatmap by Groups</h3><img src='data_exploration_plots/feature_correlation_heatmap_groups.png' alt='Feature Correlation Heatmap by Groups' class='plot-img'><h3>Feature Distributions by Group</h3><p>These histograms show how features differ between hypermethylated (score >0.5) and hypomethylated (≤0.5) groups.</p><div class='feature-dists'><div class='feature-dist-block'><h4>start</h4><img src='data_exploration_plots/features_by_group/start_group_distribution.png' alt='start_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>end</h4><img src='data_exploration_plots/features_by_group/end_group_distribution.png' alt='end_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>score</h4><img src='data_exploration_plots/features_by_group/score_group_distribution.png' alt='score_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>seq_length</h4><img src='data_exploration_plots/features_by_group/seq_length_group_distribution.png' alt='seq_length_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>gc_content</h4><img src='data_exploration_plots/features_by_group/gc_content_group_distribution.png' alt='gc_content_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>cpg_density</h4><img src='data_exploration_plots/features_by_group/cpg_density_group_distribution.png' alt='cpg_density_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_AA</h4><img src='data_exploration_plots/features_by_group/k2_AA_group_distribution.png' alt='k2_AA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_AC</h4><img src='data_exploration_plots/features_by_group/k2_AC_group_distribution.png' alt='k2_AC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_AG</h4><img src='data_exploration_plots/features_by_group/k2_AG_group_distribution.png' alt='k2_AG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_AT</h4><img src='data_exploration_plots/features_by_group/k2_AT_group_distribution.png' alt='k2_AT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_CA</h4><img src='data_exploration_plots/features_by_group/k2_CA_group_distribution.png' alt='k2_CA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_CC</h4><img src='data_exploration_plots/features_by_group/k2_CC_group_distribution.png' alt='k2_CC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_CG</h4><img src='data_exploration_plots/features_by_group/k2_CG_group_distribution.png' alt='k2_CG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_CT</h4><img src='data_exploration_plots/features_by_group/k2_CT_group_distribution.png' alt='k2_CT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_GA</h4><img src='data_exploration_plots/features_by_group/k2_GA_group_distribution.png' alt='k2_GA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_GC</h4><img src='data_exploration_plots/features_by_group/k2_GC_group_distribution.png' alt='k2_GC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_GG</h4><img src='data_exploration_plots/features_by_group/k2_GG_group_distribution.png' alt='k2_GG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_GT</h4><img src='data_exploration_plots/features_by_group/k2_GT_group_distribution.png' alt='k2_GT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_TA</h4><img src='data_exploration_plots/features_by_group/k2_TA_group_distribution.png' alt='k2_TA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_TC</h4><img src='data_exploration_plots/features_by_group/k2_TC_group_distribution.png' alt='k2_TC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_TG</h4><img src='data_exploration_plots/features_by_group/k2_TG_group_distribution.png' alt='k2_TG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k2_TT</h4><img src='data_exploration_plots/features_by_group/k2_TT_group_distribution.png' alt='k2_TT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AAA</h4><img src='data_exploration_plots/features_by_group/k3_AAA_group_distribution.png' alt='k3_AAA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AAC</h4><img src='data_exploration_plots/features_by_group/k3_AAC_group_distribution.png' alt='k3_AAC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AAG</h4><img src='data_exploration_plots/features_by_group/k3_AAG_group_distribution.png' alt='k3_AAG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AAT</h4><img src='data_exploration_plots/features_by_group/k3_AAT_group_distribution.png' alt='k3_AAT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ACA</h4><img src='data_exploration_plots/features_by_group/k3_ACA_group_distribution.png' alt='k3_ACA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ACC</h4><img src='data_exploration_plots/features_by_group/k3_ACC_group_distribution.png' alt='k3_ACC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ACG</h4><img src='data_exploration_plots/features_by_group/k3_ACG_group_distribution.png' alt='k3_ACG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ACT</h4><img src='data_exploration_plots/features_by_group/k3_ACT_group_distribution.png' alt='k3_ACT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AGA</h4><img src='data_exploration_plots/features_by_group/k3_AGA_group_distribution.png' alt='k3_AGA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AGC</h4><img src='data_exploration_plots/features_by_group/k3_AGC_group_distribution.png' alt='k3_AGC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AGG</h4><img src='data_exploration_plots/features_by_group/k3_AGG_group_distribution.png' alt='k3_AGG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_AGT</h4><img src='data_exploration_plots/features_by_group/k3_AGT_group_distribution.png' alt='k3_AGT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ATA</h4><img src='data_exploration_plots/features_by_group/k3_ATA_group_distribution.png' alt='k3_ATA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ATC</h4><img src='data_exploration_plots/features_by_group/k3_ATC_group_distribution.png' alt='k3_ATC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ATG</h4><img src='data_exploration_plots/features_by_group/k3_ATG_group_distribution.png' alt='k3_ATG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_ATT</h4><img src='data_exploration_plots/features_by_group/k3_ATT_group_distribution.png' alt='k3_ATT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CAA</h4><img src='data_exploration_plots/features_by_group/k3_CAA_group_distribution.png' alt='k3_CAA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CAC</h4><img src='data_exploration_plots/features_by_group/k3_CAC_group_distribution.png' alt='k3_CAC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CAG</h4><img src='data_exploration_plots/features_by_group/k3_CAG_group_distribution.png' alt='k3_CAG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CAT</h4><img src='data_exploration_plots/features_by_group/k3_CAT_group_distribution.png' alt='k3_CAT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CCA</h4><img src='data_exploration_plots/features_by_group/k3_CCA_group_distribution.png' alt='k3_CCA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CCC</h4><img src='data_exploration_plots/features_by_group/k3_CCC_group_distribution.png' alt='k3_CCC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CCG</h4><img src='data_exploration_plots/features_by_group/k3_CCG_group_distribution.png' alt='k3_CCG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CCT</h4><img src='data_exploration_plots/features_by_group/k3_CCT_group_distribution.png' alt='k3_CCT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CGA</h4><img src='data_exploration_plots/features_by_group/k3_CGA_group_distribution.png' alt='k3_CGA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CGC</h4><img src='data_exploration_plots/features_by_group/k3_CGC_group_distribution.png' alt='k3_CGC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CGG</h4><img src='data_exploration_plots/features_by_group/k3_CGG_group_distribution.png' alt='k3_CGG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CGT</h4><img src='data_exploration_plots/features_by_group/k3_CGT_group_distribution.png' alt='k3_CGT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CTA</h4><img src='data_exploration_plots/features_by_group/k3_CTA_group_distribution.png' alt='k3_CTA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CTC</h4><img src='data_exploration_plots/features_by_group/k3_CTC_group_distribution.png' alt='k3_CTC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CTG</h4><img src='data_exploration_plots/features_by_group/k3_CTG_group_distribution.png' alt='k3_CTG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_CTT</h4><img src='data_exploration_plots/features_by_group/k3_CTT_group_distribution.png' alt='k3_CTT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GAA</h4><img src='data_exploration_plots/features_by_group/k3_GAA_group_distribution.png' alt='k3_GAA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GAC</h4><img src='data_exploration_plots/features_by_group/k3_GAC_group_distribution.png' alt='k3_GAC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GAG</h4><img src='data_exploration_plots/features_by_group/k3_GAG_group_distribution.png' alt='k3_GAG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GAT</h4><img src='data_exploration_plots/features_by_group/k3_GAT_group_distribution.png' alt='k3_GAT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GCA</h4><img src='data_exploration_plots/features_by_group/k3_GCA_group_distribution.png' alt='k3_GCA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GCC</h4><img src='data_exploration_plots/features_by_group/k3_GCC_group_distribution.png' alt='k3_GCC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GCG</h4><img src='data_exploration_plots/features_by_group/k3_GCG_group_distribution.png' alt='k3_GCG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GCT</h4><img src='data_exploration_plots/features_by_group/k3_GCT_group_distribution.png' alt='k3_GCT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GGA</h4><img src='data_exploration_plots/features_by_group/k3_GGA_group_distribution.png' alt='k3_GGA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GGC</h4><img src='data_exploration_plots/features_by_group/k3_GGC_group_distribution.png' alt='k3_GGC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GGG</h4><img src='data_exploration_plots/features_by_group/k3_GGG_group_distribution.png' alt='k3_GGG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GGT</h4><img src='data_exploration_plots/features_by_group/k3_GGT_group_distribution.png' alt='k3_GGT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GTA</h4><img src='data_exploration_plots/features_by_group/k3_GTA_group_distribution.png' alt='k3_GTA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GTC</h4><img src='data_exploration_plots/features_by_group/k3_GTC_group_distribution.png' alt='k3_GTC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GTG</h4><img src='data_exploration_plots/features_by_group/k3_GTG_group_distribution.png' alt='k3_GTG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_GTT</h4><img src='data_exploration_plots/features_by_group/k3_GTT_group_distribution.png' alt='k3_GTT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TAA</h4><img src='data_exploration_plots/features_by_group/k3_TAA_group_distribution.png' alt='k3_TAA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TAC</h4><img src='data_exploration_plots/features_by_group/k3_TAC_group_distribution.png' alt='k3_TAC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TAG</h4><img src='data_exploration_plots/features_by_group/k3_TAG_group_distribution.png' alt='k3_TAG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TAT</h4><img src='data_exploration_plots/features_by_group/k3_TAT_group_distribution.png' alt='k3_TAT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TCA</h4><img src='data_exploration_plots/features_by_group/k3_TCA_group_distribution.png' alt='k3_TCA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TCC</h4><img src='data_exploration_plots/features_by_group/k3_TCC_group_distribution.png' alt='k3_TCC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TCG</h4><img src='data_exploration_plots/features_by_group/k3_TCG_group_distribution.png' alt='k3_TCG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TCT</h4><img src='data_exploration_plots/features_by_group/k3_TCT_group_distribution.png' alt='k3_TCT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TGA</h4><img src='data_exploration_plots/features_by_group/k3_TGA_group_distribution.png' alt='k3_TGA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TGC</h4><img src='data_exploration_plots/features_by_group/k3_TGC_group_distribution.png' alt='k3_TGC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TGG</h4><img src='data_exploration_plots/features_by_group/k3_TGG_group_distribution.png' alt='k3_TGG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TGT</h4><img src='data_exploration_plots/features_by_group/k3_TGT_group_distribution.png' alt='k3_TGT_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TTA</h4><img src='data_exploration_plots/features_by_group/k3_TTA_group_distribution.png' alt='k3_TTA_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TTC</h4><img src='data_exploration_plots/features_by_group/k3_TTC_group_distribution.png' alt='k3_TTC_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TTG</h4><img src='data_exploration_plots/features_by_group/k3_TTG_group_distribution.png' alt='k3_TTG_group_distribution' class='plot-img feature-img'></div><div class='feature-dist-block'><h4>k3_TTT</h4><img src='data_exploration_plots/features_by_group/k3_TTT_group_distribution.png' alt='k3_TTT_group_distribution' class='plot-img feature-img'></div></div>
+
+        <h2 id='regression-performance'>Regression Performance</h2><p>The table below presents performance metrics for regression models predicting continuous methylation levels. Following the table are plots illustrating regression model predictions and score distributions.</p><table class='metric-table'><tr><th>Model</th><th>MSE</th><th>R²</th><th>Pearson Corr</th></tr><tr><td>CNN_Model</td><td>0.0773</td><td>0.5694</td><td>0.7598</td></tr></table>
+
+        <h2>Regression Plots</h2><h3>Distribution of Test Methylation Scores</h3><img src='regression_plots/test_score_distribution.png' alt='Distribution of Test Methylation Scores' class='plot-img'><h3>CNN Predictions vs Actual Methylation Scores</h3><img src='regression_plots/cnn_pred_vs_actual.png' alt='CNN Predictions vs Actual Methylation Scores' class='plot-img'><h3>Interactive Version</h3><p><a href='regression_plots/cnn_pred_vs_actual_interactive.html' target='_blank' class='interactive-link'>Open Interactive Plot</a></p>
+
+        <h2 id='classification-performance'>Classification Performance</h2><p>The table below presents performance metrics for classification models predicting whether samples exceed a given methylation score threshold. Following the table are ROC curves and distribution plots.</p><table class='metric-table'><tr><th>Model</th><th>AUC</th><th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th></tr><tr><td>Logistic Regression</td><td>0.9368</td><td>0.8606</td><td>0.8598</td><td>0.8949</td><td>0.8273</td></tr><tr><td>Random Forest</td><td>0.9224</td><td>0.8569</td><td>0.8618</td><td>0.8602</td><td>0.8633</td></tr><tr><td>MLP</td><td>0.4945</td><td>0.4888</td><td>0.4841</td><td>0.5059</td><td>0.4640</td></tr><tr><td>Ensemble</td><td>0.9030</td><td>0.8494</td><td>0.8514</td><td>0.8689</td><td>0.8345</td></tr></table>
+
+        <h2>Classification Plots</h2><h3>Distribution of Class Labels</h3><img src='classification_plots/class_label_distribution.png' alt='Distribution of Class Labels' class='plot-img'><h3>Logistic Regression ROC Curve</h3><img src='classification_plots/lr_roc.png' alt='Logistic Regression ROC Curve' class='plot-img'><h3>Random Forest ROC Curve</h3><img src='classification_plots/rf_roc.png' alt='Random Forest ROC Curve' class='plot-img'><h3>MLP ROC Curve</h3><img src='classification_plots/mlp_roc.png' alt='MLP ROC Curve' class='plot-img'><h3>Ensemble ROC Curve</h3><img src='classification_plots/ensemble_roc.png' alt='Ensemble ROC Curve' class='plot-img'>
+
+        
+
+        <h2 id='kernel-motif-discovery'>Motif Discovery by Kernel Size</h2><p>Below are motif logos discovered for each kernel size used in the model. These motifs may highlight sequence patterns relevant to the convolutional filters.</p><h3>Kernel_5</h3><div class='motif-logos'><div class='motif-logo-block'><h4>Cluster 0</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_0_logo.png' alt='Motif Logo kernel_5 Cluster 0' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 1</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_1_logo.png' alt='Motif Logo kernel_5 Cluster 1' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 2</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_2_logo.png' alt='Motif Logo kernel_5 Cluster 2' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 3</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_3_logo.png' alt='Motif Logo kernel_5 Cluster 3' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 4</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_4_logo.png' alt='Motif Logo kernel_5 Cluster 4' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 5</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_5_logo.png' alt='Motif Logo kernel_5 Cluster 5' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 6</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_6_logo.png' alt='Motif Logo kernel_5 Cluster 6' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 7</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_7_logo.png' alt='Motif Logo kernel_5 Cluster 7' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 8</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_8_logo.png' alt='Motif Logo kernel_5 Cluster 8' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 9</h4><img src='motifs_by_kernel/kernel_5/clusters/logos/cluster_9_logo.png' alt='Motif Logo kernel_5 Cluster 9' class='plot-img motif-img'></div></div><h3>Kernel_9</h3><div class='motif-logos'><div class='motif-logo-block'><h4>Cluster 0</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_0_logo.png' alt='Motif Logo kernel_9 Cluster 0' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 1</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_1_logo.png' alt='Motif Logo kernel_9 Cluster 1' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 2</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_2_logo.png' alt='Motif Logo kernel_9 Cluster 2' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 3</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_3_logo.png' alt='Motif Logo kernel_9 Cluster 3' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 4</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_4_logo.png' alt='Motif Logo kernel_9 Cluster 4' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 5</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_5_logo.png' alt='Motif Logo kernel_9 Cluster 5' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 6</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_6_logo.png' alt='Motif Logo kernel_9 Cluster 6' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 7</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_7_logo.png' alt='Motif Logo kernel_9 Cluster 7' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 8</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_8_logo.png' alt='Motif Logo kernel_9 Cluster 8' class='plot-img motif-img'></div><div class='motif-logo-block'><h4>Cluster 9</h4><img src='motifs_by_kernel/kernel_9/clusters/logos/cluster_9_logo.png' alt='Motif Logo kernel_9 Cluster 9' class='plot-img motif-img'></div></div>
+
+        <section>
+        <h2>Conclusions</h2>
+        <p>
+        In summary, our Random Forest approach often provides robust performance on classification tasks, while the CNN-based regressor shows promising results in predicting continuous methylation scores.
+        Integrated Gradients analysis provides insights into which nucleotide positions the model relies on, guiding potential feature engineering and improvements.
+        Motif discovery (both general and kernel-specific) highlights enriched sequence patterns that may be biologically relevant. Further exploration and validation of these motifs could uncover important regulatory mechanisms.
+        </p>
+        </section>
+    </div>
+</div>
+</body>
+</html>

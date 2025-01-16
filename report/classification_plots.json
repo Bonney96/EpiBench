@@ -1,0 +1,7 @@
+{
+    "class_label_distribution": "classification_plots/class_label_distribution.png",
+    "lr_roc": "classification_plots/lr_roc.png",
+    "rf_roc": "classification_plots/rf_roc.png",
+    "mlp_roc": "classification_plots/mlp_roc.png",
+    "ensemble_roc": "classification_plots/ensemble_roc.png"
+}
