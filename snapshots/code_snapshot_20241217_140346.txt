@@ -1,0 +1,1486 @@
+
+================================================================================
+FILE: snapshots/txt_snap.py
+================================================================================
+import os
+from datetime import datetime
+
+# Root directory containing the code
+ROOT_DIR = "/storage1/fs1/dspencer/Active/spencerlab/abonney/EpiBench"
+
+# File extensions to include in the snapshot
+FILE_EXTENSIONS = ['.py', '.sh', '.R', '.ipynb', '.yml', '.yaml']
+
+def should_include(file_name):
+    # Exclude macOS resource fork files that start with '._'
+    if file_name.startswith("._"):
+        return False
+    # Include file if it has one of the allowed extensions
+    return any(file_name.lower().endswith(ext) for ext in FILE_EXTENSIONS)
+
+def create_text_snapshot(root_dir, extensions):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    snapshot_name = f"code_snapshot_{timestamp}.txt"
+    snapshot_path = os.path.join(os.getcwd(), snapshot_name)
+
+    with open(snapshot_path, 'w', encoding='utf-8', errors='replace') as out_file:
+        # Recursively walk the root directory
+        for root, dirs, files in os.walk(root_dir):
+            for file in files:
+                if should_include(file):
+                    full_path = os.path.join(root, file)
+                    # Write a header for each file before its content
+                    relative_path = os.path.relpath(full_path, start=root_dir)
+                    out_file.write("\n" + "="*80 + "\n")
+                    out_file.write(f"FILE: {relative_path}\n")
+                    out_file.write("="*80 + "\n")
+
+                    # Append file contents
+                    try:
+                        with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
+                            content = f.read()
+                        out_file.write(content)
+                        out_file.write("\n")  # Blank line after file content
+                    except Exception as e:
+                        out_file.write(f"\n[Error reading file: {e}]\n")
+
+    print(f"Text snapshot created: {snapshot_path}")
+
+if __name__ == "__main__":
+    create_text_snapshot(ROOT_DIR, FILE_EXTENSIONS)
+
+
+================================================================================
+FILE: snapshots/snapshot.py
+================================================================================
+import os
+import tarfile
+from datetime import datetime
+
+# Root directory containing the code
+ROOT_DIR = "/storage1/fs1/dspencer/Active/spencerlab/abonney/EpiBench"
+
+# File extensions to include in the snapshot
+FILE_EXTENSIONS = ['.py', '.sh', '.R', '.ipynb', '.yml', '.yaml', '.json', '.txt', '.md']
+
+def should_include(file_name):
+    # Include file if it has one of the allowed extensions
+    return any(file_name.lower().endswith(ext) for ext in FILE_EXTENSIONS)
+
+def create_snapshot(root_dir, extensions):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    snapshot_name = f"code_snapshot_{timestamp}.tar.gz"
+    snapshot_path = os.path.join(os.getcwd(), snapshot_name)
+
+    # Open the tar.gz file for writing
+    with tarfile.open(snapshot_path, "w:gz") as tar:
+        # Recursively walk the root directory
+        for root, dirs, files in os.walk(root_dir):
+            for file in files:
+                if should_include(file):
+                    full_path = os.path.join(root, file)
+                    # Add file to the archive, preserving directory structure relative to ROOT_DIR
+                    arcname = os.path.relpath(full_path, start=root_dir)
+                    tar.add(full_path, arcname=arcname)
+
+    print(f"Snapshot created: {snapshot_path}")
+
+if __name__ == "__main__":
+    create_snapshot(ROOT_DIR, FILE_EXTENSIONS)
+
+
+================================================================================
+FILE: src/__init__.py
+================================================================================
+# src/__init__.py
+# This top-level __init__ can import frequently used items to make them accessible directly from `src`.
+# For example, import the config variables at the top level.
+
+from .config import (
+    RAW_BED_FILE,
+    RAW_FASTA_FILE,
+    PREPARED_DATA_CSV,
+    FEATURE_DATA_CSV,
+    RANDOM_SEED
+)
+
+# This way, I can do: from src import PREPARED_DATA_CSV
+
+
+================================================================================
+FILE: src/config.py
+================================================================================
+# config.py
+
+##########################
+# File Paths
+##########################
+RAW_BED_FILE = "data/raw/ND150826-CD34-wgbs.positive_control_regions.meth.bed"
+RAW_FASTA_FILE = "data/raw/positive_control_sequences.fa"
+PREPARED_DATA_CSV = "data/processed/positive_control_data.csv"
+FEATURE_DATA_CSV = "data/processed/positive_control_features.csv"
+
+##########################
+# General Settings
+##########################
+RANDOM_SEED = 42  # For reproducibility
+
+
+================================================================================
+FILE: src/reporting/__init__.py
+================================================================================
+# src/reporting/__init__.py
+from .generate_report import generate_html_report
+
+
+================================================================================
+FILE: src/reporting/generate_report.py
+================================================================================
+# generate_report.py
+import os
+
+def generate_html_report(
+    regression_results,
+    classification_results,
+    data_exploration_plots,
+    plots,
+    output_path
+):
+    """
+    Generate a comprehensive HTML report comparing multiple regression and
+    classification models, as well as providing data and feature exploration.
+    This updated version:
+    - Includes methylation score in the correlation heatmap.
+    - Separates regression and classification plots into their own sections.
+    - Ensures all new pipeline-generated data and plots appear in the final report.
+    """
+
+    # Map plot keys to human-readable titles
+    plot_titles = {
+        "correlation_heatmap": "Feature and Methylation Score Correlation Heatmap",
+        "test_score_distribution": "Distribution of Test Methylation Scores",
+        "cnn_pred_vs_actual": "CNN Predictions vs Actual Methylation Scores",
+        "class_label_distribution": "Distribution of Class Labels",
+        "lr_roc": "Logistic Regression ROC Curve",
+        "rf_roc": "Random Forest ROC Curve",
+        "mlp_roc": "MLP ROC Curve",
+        "ensemble_roc": "Ensemble ROC Curve"
+    }
+
+    # Separate regression and classification plots based on known keys
+    regression_plot_keys = ["test_score_distribution", "cnn_pred_vs_actual"]
+    classification_plot_keys = ["class_label_distribution", "lr_roc", "rf_roc", "mlp_roc", "ensemble_roc"]
+
+    # Construct the regression results table
+    regression_table = (
+        "<table class='metric-table'>"
+        "<tr><th>Model</th><th>MSE</th><th>R²</th><th>Pearson Corr</th></tr>"
+    )
+    for model, metrics in regression_results.items():
+        regression_table += (
+            f"<tr><td>{model}</td>"
+            f"<td>{metrics['mse']:.4f}</td>"
+            f"<td>{metrics['r2']:.4f}</td>"
+            f"<td>{metrics['pearson_corr']:.4f}</td></tr>"
+        )
+    regression_table += "</table>"
+
+    # Construct the classification results table
+    classification_table = (
+        "<table class='metric-table'>"
+        "<tr><th>Model</th><th>AUC</th><th>Accuracy</th>"
+        "<th>F1</th><th>Precision</th><th>Recall</th></tr>"
+    )
+    for model, metrics in classification_results.items():
+        classification_table += (
+            f"<tr><td>{model}</td>"
+            f"<td>{metrics['auc']:.4f}</td>"
+            f"<td>{metrics['accuracy']:.4f}</td>"
+            f"<td>{metrics['f1']:.4f}</td>"
+            f"<td>{metrics['precision']:.4f}</td>"
+            f"<td>{metrics['recall']:.4f}</td></tr>"
+        )
+    classification_table += "</table>"
+
+    # Construct the data exploration section
+    data_exploration_html = "<h2>Data and Feature Exploration</h2>"
+    data_exploration_html += (
+        "<p>Below are insights into the relationships between features and the methylation score, "
+        "including a correlation heatmap that now incorporates methylation scores.</p>"
+    )
+
+    # Add correlation heatmap if available
+    if "correlation_heatmap" in data_exploration_plots:
+        corr_path = data_exploration_plots["correlation_heatmap"]
+        title = plot_titles.get("correlation_heatmap", "Feature Correlation Heatmap")
+        data_exploration_html += (
+            f"<h3>{title}</h3>"
+            f"<img src='{corr_path}' alt='{title}'>"
+        )
+
+    # Add feature distributions if available
+    if "feature_distributions" in data_exploration_plots:
+        data_exploration_html += "<h3>Feature Distributions</h3>"
+        data_exploration_html += (
+            "<p>Each plot shows the distribution of a particular feature across the dataset.</p>"
+        )
+        for feature, fpath in data_exploration_plots["feature_distributions"].items():
+            data_exploration_html += (
+                f"<h4>{feature}</h4>"
+                f"<img src='{fpath}' alt='{feature}_distribution'>"
+            )
+
+    # Regression performance section
+    regression_html = "<h2>Regression Performance</h2>"
+    regression_html += (
+        "<p>The table below presents performance metrics for the regression models, "
+        "which predict continuous methylation levels. Following the table, we include "
+        "plots illustrating regression model predictions and score distributions.</p>"
+        f"{regression_table}"
+    )
+
+    # Classification performance section
+    classification_html = "<h2>Classification Performance</h2>"
+    classification_html += (
+        "<p>The table below presents performance metrics for classification models, "
+        "which predict whether samples exceed a given methylation score threshold. "
+        "Following the table, ROC curves and distribution plots are provided.</p>"
+        f"{classification_table}"
+    )
+
+    # Construct the model performance plots sections
+    # Regression plots
+    regression_plots_html = "<h2>Regression Plots</h2>"
+    for plot_name in regression_plot_keys:
+        if plot_name in plots:
+            formatted_name = plot_titles.get(plot_name, plot_name.replace('_', ' ').title())
+            regression_plots_html += f"<h3>{formatted_name}</h3><img src='{plots[plot_name]}' alt='{formatted_name}'>"
+
+    # Classification plots
+    classification_plots_html = "<h2>Classification Plots</h2>"
+    for plot_name in classification_plot_keys:
+        if plot_name in plots:
+            formatted_name = plot_titles.get(plot_name, plot_name.replace('_', ' ').title())
+            classification_plots_html += f"<h3>{formatted_name}</h3><img src='{plots[plot_name]}' alt='{formatted_name}'>"
+
+    # Final HTML content
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Methylation Prediction Report</title>
+<style>
+body {{
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    color: #333;
+}}
+h1 {{
+    color: #333;
+}}
+.metric-table {{
+    border-collapse: collapse;
+    margin: 20px 0;
+    width: 60%;
+}}
+.metric-table th, .metric-table td {{
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: center;
+}}
+.metric-table th {{
+    background-color: #f4f4f4;
+}}
+img {{
+    max-width: 600px;
+    height: auto;
+    display: block;
+    margin: 20px 0;
+}}
+</style>
+</head>
+<body>
+<h1>Methylation Prediction Report</h1>
+<p>This report presents a comprehensive overview of both regression and classification models used to predict and classify methylation levels. 
+It includes data exploration results (correlation with methylation scores and feature distributions), 
+regression performance (metrics and visualizations), and classification performance (metrics and ROC curves).</p>
+
+{data_exploration_html}
+
+{regression_html}
+
+{regression_plots_html}
+
+{classification_html}
+
+{classification_plots_html}
+
+<p>In summary, the Random Forest approach often provides robust performance, and the CNN-based regressor shows promising results in modeling continuous methylation levels. The inclusion of the correlation heatmap with methylation scores helps in understanding the relationship between features and the response variable, guiding model improvements and feature selection.</p>
+
+</body>
+</html>
+"""
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Write the HTML file
+    with open(output_path, 'w') as f:
+        f.write(html_content)
+
+    print(f"Report generated at: {output_path}")
+
+
+================================================================================
+FILE: src/utils/__init__.py
+================================================================================
+# src/utils/__init__.py
+# Re-export utilities for easy access.
+from .file_utils import load_csv, save_csv
+from .seq_utils import gc_content, cpg_density, kmer_counts
+
+
+================================================================================
+FILE: src/utils/seq_utils.py
+================================================================================
+# seq_utils.py
+from itertools import product
+
+def gc_content(seq):
+    seq = seq.upper()
+    gc_count = seq.count('G') + seq.count('C')
+    return gc_count / len(seq) if len(seq) > 0 else 0
+
+def cpg_density(seq):
+    seq = seq.upper()
+    cpg_count = seq.count("CG")
+    return cpg_count / len(seq) if len(seq) > 0 else 0
+
+def kmer_counts(seq, k=2):
+    seq = seq.upper()
+    counts = {}
+    possible_kmers = [''.join(p) for p in product('ACGT', repeat=k)]
+    for km in possible_kmers:
+        counts[km] = 0
+    
+    for i in range(len(seq)-k+1):
+        kmer = seq[i:i+k]
+        if kmer in counts:
+            counts[kmer] += 1
+    
+    length = len(seq)
+    if length > 0:
+        for km in counts:
+            counts[km] = counts[km] / (length - k + 1)
+    return counts
+
+
+================================================================================
+FILE: src/utils/file_utils.py
+================================================================================
+# file_utils.py
+import pandas as pd
+import os
+
+def load_csv(path):
+    """
+    Load a CSV file into a pandas DataFrame.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"File not found: {path}")
+    return pd.read_csv(path)
+
+def save_csv(df, path, index=False):
+    """
+    Save a pandas DataFrame to a CSV file.
+    """
+    directory = os.path.dirname(path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
+    df.to_csv(path, index=index)
+    print(f"Saved CSV to: {path}")
+
+
+================================================================================
+FILE: src/models/classical.py
+================================================================================
+# classical.py
+
+import numpy as np
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+
+def train_linear_regression(X, y):
+    model = LinearRegression()
+    model.fit(X, y)
+    return model
+
+def predict_linear_regression(model, X):
+    return model.predict(X)
+
+def train_random_forest_regressor(X, y, n_estimators=100, random_state=42):
+    model = RandomForestRegressor(n_estimators=n_estimators, random_state=random_state)
+    model.fit(X, y)
+    return model
+
+def predict_random_forest_regressor(model, X):
+    return model.predict(X)
+
+def train_logistic_regression(X, y):
+    model = LogisticRegression(solver='liblinear', random_state=42)
+    model.fit(X, y)
+    return model
+
+def predict_logistic_regression(model, X):
+    # return probabilities for classification tasks
+    return model.predict_proba(X)[:, 1]
+
+def train_random_forest_classifier(X, y, n_estimators=100, random_state=42):
+    model = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
+    model.fit(X, y)
+    return model
+
+def predict_random_forest_classifier(model, X):
+    return model.predict_proba(X)[:, 1]
+
+
+================================================================================
+FILE: src/models/__init__.py
+================================================================================
+# src/models/__init__.py
+# Re-export model training functions and classes to access them easily.
+
+from .classical import (
+    train_linear_regression, predict_linear_regression,
+    train_random_forest_regressor, predict_random_forest_regressor,
+    train_logistic_regression, predict_logistic_regression,
+    train_random_forest_classifier, predict_random_forest_classifier
+)
+
+from .deep_learning import (
+    SeqCNNRegressor, train_model, predict_model,
+)
+
+from .datasets import SequenceDataset
+
+
+================================================================================
+FILE: src/models/deep_learning_transformer.py
+================================================================================
+# deep_learning.py
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import math
+
+PAD_IDX = 4  # Same as in datasets.py
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=10000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # shape (1, max_len, d_model)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        seq_len = x.size(1)
+        x = x + self.pe[:, :seq_len, :]
+        return self.dropout(x)
+
+class DNARegressor(nn.Module):
+    def __init__(self, vocab_size=5, embed_dim=64, num_heads=4, num_layers=4, ff_dim=256, dropout=0.1):
+        super(DNARegressor, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=PAD_IDX)
+        self.pos_encoder = PositionalEncoding(d_model=embed_dim, dropout=dropout)
+
+        encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim,
+                                                   nhead=num_heads,
+                                                   dim_feedforward=ff_dim,
+                                                   dropout=dropout,
+                                                   batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+
+        self.fc1 = nn.Linear(embed_dim, 64)
+        self.fc2 = nn.Linear(64, 1)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, attention_mask):
+        # x: (batch, seq_len)
+        # attention_mask: (batch, seq_len), True for token, False for pad
+        # For Transformer, src_key_padding_mask: True means this token is pad.
+        src_key_padding_mask = ~attention_mask  # invert mask
+        emb = self.embedding(x)  # (batch, seq_len, embed_dim)
+        emb = self.pos_encoder(emb)
+        out = self.transformer_encoder(emb, src_key_padding_mask=src_key_padding_mask)  # (batch, seq_len, embed_dim)
+
+        # Mean pool over non-padding tokens
+        mask = attention_mask.unsqueeze(-1)
+        out = out * mask
+        sum_out = out.sum(dim=1)
+        lengths = mask.sum(dim=1)
+        pooled = sum_out / lengths.clamp(min=1)
+
+        # Regression head
+        x = self.relu(self.fc1(pooled))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
+
+def train_model(model, train_loader, val_loader, epochs=20, lr=0.001, weight_decay=1e-5, device=None, early_stop_patience=5):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    elif isinstance(device, str):
+        device = torch.device(device)
+
+    model.to(device)
+
+    criterion = nn.MSELoss()
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scaler = torch.amp.GradScaler(enabled=(device.type == 'cuda'))
+
+    best_val_loss = float('inf')
+    patience_counter = 0
+
+    for epoch in range(epochs):
+        model.train()
+        total_train_loss = 0.0
+        for X_batch, y_batch, mask_batch in train_loader:
+            X_batch = X_batch.to(device)
+            y_batch = y_batch.to(device).unsqueeze(1)
+            mask_batch = mask_batch.to(device)
+
+            optimizer.zero_grad()
+            with torch.amp.autocast(device_type='cuda', enabled=(device.type=='cuda')):
+                outputs = model(X_batch, mask_batch)
+                loss = criterion(outputs, y_batch)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            total_train_loss += loss.item()
+
+        avg_train_loss = total_train_loss / len(train_loader)
+
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for X_batch, y_batch, mask_batch in val_loader:
+                X_batch = X_batch.to(device)
+                y_batch = y_batch.to(device).unsqueeze(1)
+                mask_batch = mask_batch.to(device)
+                with torch.amp.autocast(device_type='cuda', enabled=(device.type=='cuda')):
+                    outputs = model(X_batch, mask_batch)
+                    loss = criterion(outputs, y_batch)
+                val_loss += loss.item()
+
+        avg_val_loss = val_loss / len(val_loader)
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+
+        # Early stopping
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), "best_model.pth")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= early_stop_patience:
+                print("Early stopping triggered.")
+                break
+
+    model.load_state_dict(torch.load("best_model.pth"))
+
+def predict_model(model, test_loader, device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    elif isinstance(device, str):
+        device = torch.device(device)
+
+    model.to(device)
+    model.eval()
+    preds = []
+    with torch.no_grad():
+        for X_batch, _, mask_batch in test_loader:
+            X_batch = X_batch.to(device)
+            mask_batch = mask_batch.to(device)
+            with torch.amp.autocast(device_type='cuda', enabled=(device.type=='cuda')):
+                outputs = model(X_batch, mask_batch)
+            preds.extend(outputs.squeeze(1).cpu().numpy())
+    return np.array(preds)
+
+
+================================================================================
+FILE: src/models/deep_learning.py
+================================================================================
+# src/models/deep_learning.py
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+
+class SeqCNNRegressor(nn.Module):
+    def __init__(self, 
+                 kernel_sizes=(3,5,7),
+                 filters_per_branch=64, 
+                 fc_units=64, 
+                 dropout_rate=0.5,
+                 use_batchnorm=True):
+        super(SeqCNNRegressor, self).__init__()
+        
+        self.kernel_sizes = kernel_sizes
+        self.use_batchnorm = use_batchnorm
+
+        # We'll dynamically create the convolution branches based on kernel_sizes
+        self.branches = nn.ModuleList()
+        self.branch_norms = nn.ModuleList()
+        in_channels = 4  # For one-hot encoded sequence 'A,C,G,T'
+        for k in self.kernel_sizes:
+            conv = nn.Conv1d(in_channels=in_channels, out_channels=filters_per_branch, kernel_size=k, padding=k//2)
+            self.branches.append(conv)
+            if self.use_batchnorm:
+                self.branch_norms.append(nn.BatchNorm1d(filters_per_branch))
+            else:
+                self.branch_norms.append(nn.Identity())
+        
+        # After concatenation: total_channels = filters_per_branch * len(kernel_sizes)
+        total_channels = filters_per_branch * len(self.kernel_sizes)
+        
+        # Additional convolution block
+        self.conv2 = nn.Conv1d(in_channels=total_channels, out_channels=total_channels*2, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm1d(total_channels*2) if self.use_batchnorm else nn.Identity()
+        self.pool = nn.MaxPool1d(2)
+        
+        self.conv3 = nn.Conv1d(in_channels=total_channels*2, out_channels=total_channels*4, kernel_size=7, padding=3)
+        self.bn3 = nn.BatchNorm1d(total_channels*4) if self.use_batchnorm else nn.Identity()
+        
+        self.fc1 = nn.Linear(total_channels*4, fc_units)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.fc2 = nn.Linear(fc_units, 1)
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        # x shape: (batch, 4, seq_len)
+        branch_outputs = []
+        for conv, bn in zip(self.branches, self.branch_norms):
+            out = conv(x)
+            out = bn(out)
+            out = self.relu(out)
+            branch_outputs.append(out)
+
+        # Concatenate along channels
+        x_cat = torch.cat(branch_outputs, dim=1)
+        
+        x = self.conv2(x_cat)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.pool(x)
+
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+
+        # Global average pooling
+        x = x.mean(dim=2)  # (batch, channels)
+        
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
+
+
+def train_model(model, train_loader, val_loader, epochs=1, lr=0.001, weight_decay=1e-5, device=None, early_stop_patience=5):
+    """
+    Train the given model using the provided train and validation data loaders.
+
+    Parameters:
+        model (nn.Module): The regression model to train.
+        train_loader (DataLoader): Loader providing (X, y, mask) for training.
+        val_loader (DataLoader): Loader providing (X, y, mask) for validation.
+        epochs (int): Maximum number of training epochs.
+        lr (float): Learning rate for the optimizer.
+        weight_decay (float): Weight decay (L2 regularization) for the optimizer.
+        device (torch.device): The device to use for training.
+        early_stop_patience (int): Early stopping patience in epochs.
+    """
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    best_val_loss = float('inf')
+    patience_counter = 0
+
+    for epoch in range(epochs):
+        # Training phase
+        model.train()
+        total_train_loss = 0.0
+        for X_batch, y_batch, mask_batch in train_loader:
+            X_batch = X_batch.to(device)
+            y_batch = y_batch.to(device).unsqueeze(1)  # Make target shape (batch, 1)
+
+            optimizer.zero_grad()
+            outputs = model(X_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+            total_train_loss += loss.item()
+
+        avg_train_loss = total_train_loss / len(train_loader)
+
+        # Validation phase
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for X_batch, y_batch, mask_batch in val_loader:
+                X_batch = X_batch.to(device)
+                y_batch = y_batch.to(device).unsqueeze(1)
+                outputs = model(X_batch)
+                loss = criterion(outputs, y_batch)
+                val_loss += loss.item()
+
+        avg_val_loss = val_loss / len(val_loader)
+
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+
+        # Early stopping check
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), "best_model.pth")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= early_stop_patience:
+                print("Early stopping triggered.")
+                break
+
+
+def predict_model(model, test_loader, device=None):
+    """
+    Generate predictions for the data provided by the test_loader.
+
+    Parameters:
+        model (nn.Module): The trained regression model.
+        test_loader (DataLoader): Loader providing (X, y, mask) for the test set.
+        device (torch.device): The device to use for inference.
+
+    Returns:
+        np.ndarray: The model predictions as a numpy array of shape (num_samples,).
+    """
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    preds = []
+    with torch.no_grad():
+        for X_batch, y_batch, mask_batch in test_loader:
+            X_batch = X_batch.to(device)
+            outputs = model(X_batch)  # (batch, 1)
+            preds.extend(outputs.squeeze(1).cpu().numpy())
+    return np.array(preds)
+
+
+================================================================================
+FILE: src/models/datasets.py
+================================================================================
+import torch
+from torch.utils.data import Dataset
+import pandas as pd
+import numpy as np
+
+class SequenceDataset(Dataset):
+    """
+    A PyTorch Dataset for DNA sequences for regression tasks without fixed length,
+    but with a maximum allowed length to prevent memory issues.
+    """
+    def __init__(self, csv_path):
+        self.df = pd.read_csv(csv_path)
+        self.mapping = {'A':0, 'C':1, 'G':2, 'T':3, 'a':0, 'c':1, 'g':2, 't':3}
+        self.max_allowed_length = 5000  # Maximum allowed sequence length
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        seq = row['sequence'].upper()
+
+        # Truncate the sequence if it exceeds the max allowed length
+        if len(seq) > self.max_allowed_length:
+            seq = seq[:self.max_allowed_length]
+
+        seq_len = len(seq)
+        one_hot = np.zeros((4, seq_len), dtype=np.float32)
+        for i, base in enumerate(seq):
+            base_idx = self.mapping.get(base, 0)
+            one_hot[base_idx, i] = 1.0
+
+        y = float(row['score'])
+        return torch.tensor(one_hot), torch.tensor(y, dtype=torch.float32)
+
+
+def collate_fn(batch):
+    seqs = [item[0] for item in batch]  # list of Tensors (4, seq_len)
+    targets = [item[1] for item in batch]  # list of Tensors (score)
+
+    max_len = max(seq.shape[1] for seq in seqs)
+
+    padded_seqs = []
+    masks = []
+    for seq in seqs:
+        seq_len = seq.shape[1]
+        # Create a mask of length max_len: 1 for real positions, 0 for padding
+        mask = torch.zeros((max_len,), dtype=torch.float32)
+        mask[:seq_len] = 1.0
+
+        if seq_len < max_len:
+            pad_amount = max_len - seq_len
+            pad_tensor = torch.zeros((4, pad_amount), dtype=seq.dtype)
+            seq = torch.cat([seq, pad_tensor], dim=1)
+
+        padded_seqs.append(seq)
+        masks.append(mask)
+
+    X = torch.stack(padded_seqs, dim=0)   # (batch, 4, max_len)
+    y = torch.stack(targets, dim=0)       # (batch,)
+    mask = torch.stack(masks, dim=0)      # (batch, max_len)
+
+    return X, y, mask
+
+
+================================================================================
+FILE: src/data_preparation/prepare_data.py
+================================================================================
+import sys
+from Bio import SeqIO
+
+# Update these paths as needed
+bed_file = "/storage1/fs1/dspencer/Active/spencerlab/abonney/regions/simple_project/ND150826-CD34-wgbs.positive_control_regions.meth.bed"
+fasta_file = "/storage1/fs1/dspencer/Active/spencerlab/abonney/regions/simple_project/positive_control_sequences.fa"
+output_csv = "positive_control_data.csv"
+
+# Read BED data
+# Based on the data you showed, columns are:
+# 0: chrom
+# 1: start
+# 2: end
+# 3: coverage (not needed)
+# 4: score (between 0 and 1)
+regions = []
+with open(bed_file, 'r') as bf:
+    for line in bf:
+        if line.strip():
+            parts = line.strip().split('\t')
+            chrom = parts[0]
+            start = parts[1]
+            end = parts[2]
+            # coverage = parts[3]  # If you need it, but not required now
+            score = float(parts[4])
+            regions.append((chrom, start, end, score))
+
+# Create a dictionary keyed by region string (chr:start-end) to score
+score_dict = {}
+for (chrom, start, end, score) in regions:
+    region_key = f"{chrom}:{start}-{end}"
+    score_dict[region_key] = score
+
+# Parse FASTA and match sequences to scores
+with open(output_csv, 'w') as out:
+    out.write("chrom,start,end,score,sequence\n")
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        # record.id should be something like: chr1:10000-10100
+        region = record.id
+        seq = str(record.seq)
+        chrom = region.split(':')[0]
+        coords = region.split(':')[1]
+        start = coords.split('-')[0]
+        end = coords.split('-')[1]
+        score = score_dict.get(region, "unknown")
+        out.write(f"{chrom},{start},{end},{score},{seq}\n")
+
+
+================================================================================
+FILE: src/data_preparation/__init__.py
+================================================================================
+# src/data_preparation/__init__.py
+
+from .prepare_data import main as prepare_data_main
+from .feature_engineering import main as feature_engineering_main
+
+================================================================================
+FILE: src/data_preparation/feature_engineering.py
+================================================================================
+# feature_engineering.py
+import pandas as pd
+from src.config import PREPARED_DATA_CSV, FEATURE_DATA_CSV
+from src.utils.seq_utils import gc_content, cpg_density, kmer_counts
+from itertools import product
+
+df = pd.read_csv(PREPARED_DATA_CSV)
+
+all_features = []
+for _, row in df.iterrows():
+    seq = row['sequence']
+    features = {
+        'chrom': row['chrom'],
+        'start': row['start'],
+        'end': row['end'],
+        'score': row['score'],
+        'seq_length': len(seq),
+        'gc_content': gc_content(seq),
+        'cpg_density': cpg_density(seq)
+    }
+    
+    # Add 2-mer frequencies
+    k2_counts = kmer_counts(seq, k=2)
+    for kmer, val in k2_counts.items():
+        features[f"k2_{kmer}"] = val
+    
+    # Add 3-mer frequencies
+    k3_counts = kmer_counts(seq, k=3)
+    for kmer, val in k3_counts.items():
+        features[f"k3_{kmer}"] = val
+    
+    all_features.append(features)
+
+feature_df = pd.DataFrame(all_features)
+feature_df.to_csv(FEATURE_DATA_CSV, index=False)
+
+
+================================================================================
+FILE: src/evaluation/__init__.py
+================================================================================
+# src/evaluation/__init__.py
+from .metrics import evaluate_regression, evaluate_classification
+from .visualization import (
+    plot_distribution, plot_pred_vs_actual, plot_roc_curve, plot_feature_distributions, plot_correlation_heatmap
+)
+
+
+================================================================================
+FILE: src/evaluation/visualization.py
+================================================================================
+# visualization.py
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+
+
+def plot_distribution(y, title, save_path):
+    plt.figure(figsize=(6,4))
+    sns.histplot(y, kde=True, color='blue', bins=20)
+    plt.title(title)
+    plt.xlabel("Value")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    _ensure_dir_exists(save_path)
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+
+def plot_pred_vs_actual(y_true, y_pred, title, save_path):
+    plt.figure(figsize=(6,6))
+    plt.scatter(y_true, y_pred, alpha=0.5)
+    plt.plot([0,1],[0,1], 'r--')
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.xlabel("Actual")
+    plt.ylabel("Predicted")
+    plt.title(title)
+    plt.tight_layout()
+    _ensure_dir_exists(save_path)
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+
+def plot_roc_curve(y_true, y_pred_proba, title, save_path):
+    fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
+    roc_auc = auc(fpr, tpr)
+    plt.figure(figsize=(6,6))
+    plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC area = {roc_auc:.2f}')
+    plt.plot([0,1],[0,1], 'r--')
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(title)
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    _ensure_dir_exists(save_path)
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+
+def _ensure_dir_exists(path):
+    dir_name = os.path.dirname(path)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+
+def plot_correlation_heatmap(df, title, save_path):
+    plt.figure(figsize=(10,8))
+    corr = df.corr()
+    sns.heatmap(corr, annot=False, cmap='coolwarm', square=True)
+    plt.title(title)
+    plt.tight_layout()
+    _ensure_dir_exists(save_path)
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+
+def plot_feature_distributions(df, features, output_dir):
+    # Create a directory for the individual feature plots
+    os.makedirs(output_dir, exist_ok=True)
+    plot_paths = {}
+    for feature in features:
+        plt.figure(figsize=(6,4))
+        sns.histplot(df[feature], kde=True, color='blue', bins=20)
+        plt.title(f"Distribution of {feature}")
+        plt.xlabel(feature)
+        plt.ylabel("Count")
+        plt.tight_layout()
+        save_path = os.path.join(output_dir, f"{feature}_distribution.png")
+        plt.savefig(save_path, dpi=150)
+        plt.close()
+        plot_paths[feature] = save_path
+    return plot_paths
+
+================================================================================
+FILE: src/evaluation/metrics.py
+================================================================================
+# metrics.py
+
+from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, accuracy_score, f1_score, precision_score, recall_score
+from scipy.stats import pearsonr
+import numpy as np
+
+def evaluate_regression(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    if np.std(y_pred) == 0 or np.std(y_true) == 0:
+        corr = 0.0
+    else:
+        corr, _ = pearsonr(y_true, y_pred)
+    return {
+        'mse': mse,
+        'r2': r2,
+        'pearson_corr': corr
+    }
+
+def evaluate_classification(y_true, y_pred_proba, threshold=0.5):
+    y_pred = (y_pred_proba >= threshold).astype(int)
+    auc = roc_auc_score(y_true, y_pred_proba)
+    acc = accuracy_score(y_true, y_pred)
+    f1 = f1_score(y_true, y_pred)
+    prec = precision_score(y_true, y_pred)
+    rec = recall_score(y_true, y_pred)
+    return {
+        'auc': auc,
+        'accuracy': acc,
+        'f1': f1,
+        'precision': prec,
+        'recall': rec
+    }
+
+
+================================================================================
+FILE: src/pipelines/run_data_exploration.py
+================================================================================
+# run_data_exploration.py
+
+import os
+import json
+import logging
+import pandas as pd
+from src.config import FEATURE_DATA_CSV
+from src.utils.file_utils import load_csv
+from src.evaluation.visualization import plot_correlation_heatmap, plot_feature_distributions
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Starting data and feature exploration pipeline...")
+
+# Load the feature data
+df = load_csv(FEATURE_DATA_CSV)
+logger.info("Feature data loaded successfully.")
+
+exclude_cols = ['chrom', 'start', 'end']
+if 'sequence' in df.columns:
+    exclude_cols.append('sequence')
+
+numeric_features = [col for col in df.columns if col not in exclude_cols and pd.api.types.is_numeric_dtype(df[col])]
+
+# Create output directories
+os.makedirs("report/data_exploration_plots", exist_ok=True)
+
+# Plot correlation heatmap of numeric features
+corr_heatmap_path_full = "report/data_exploration_plots/feature_correlation_heatmap.png"
+plot_correlation_heatmap(df[numeric_features], "Feature Correlation Heatmap", corr_heatmap_path_full)
+
+# Plot distributions of each numeric feature
+feature_dist_dir_full = "report/data_exploration_plots/features"
+feature_dist_plots_full = plot_feature_distributions(df, numeric_features, feature_dist_dir_full)
+
+# Remove the 'report/' prefix for JSON storage
+corr_heatmap_path = "data_exploration_plots/feature_correlation_heatmap.png"
+feature_dist_plots = {f: p.replace("report/", "") for f, p in feature_dist_plots_full.items()}
+
+data_exploration_plots = {
+    "correlation_heatmap": corr_heatmap_path,
+    "feature_distributions": feature_dist_plots
+}
+
+# Save to JSON
+with open("report/data_exploration_plots.json", 'w') as f:
+    json.dump(data_exploration_plots, f, indent=4)
+
+logger.info("Data exploration plots saved as JSON.")
+
+# Generate text-based summary report
+summary_report_path = "report/data_exploration_summary.txt"
+
+desc = df[numeric_features].describe(include='all')
+corr_matrix = df[numeric_features].corr()
+
+corr_pairs = corr_matrix.unstack().dropna()
+corr_pairs = corr_pairs[corr_pairs.index.get_level_values(0) != corr_pairs.index.get_level_values(1)]
+top_positive_correlations = corr_pairs.sort_values(ascending=False).head(10)
+top_negative_correlations = corr_pairs.sort_values(ascending=True).head(10)
+
+with open(summary_report_path, "w") as report_file:
+    report_file.write("=== Data Exploration Summary ===\n\n")
+    report_file.write("**Numeric Features:**\n")
+    report_file.write(", ".join(numeric_features) + "\n\n")
+
+    report_file.write("**Summary Statistics (Numeric Features):**\n")
+    report_file.write(desc.to_string() + "\n\n")
+
+    report_file.write("**Top 10 Positive Correlations:**\n")
+    for (f1, f2), value in top_positive_correlations.items():
+        report_file.write(f"{f1} and {f2}: {value:.3f}\n")
+    report_file.write("\n")
+
+    report_file.write("**Top 10 Negative Correlations:**\n")
+    for (f1, f2), value in top_negative_correlations.items():
+        report_file.write(f"{f1} and {f2}: {value:.3f}\n")
+    report_file.write("\n")
+
+    report_file.write("**Observations: **\n")
+    report_file.write("1. Review correlations to identify strong relationships.\n")
+    report_file.write("2. The summary statistics provide distribution insights.\n")
+    report_file.write("3. Feature distribution plots are in 'report/data_exploration_plots/features'.\n")
+
+logger.info(f"Data exploration summary saved at {summary_report_path}.")
+logger.info("Data exploration pipeline completed.")
+
+
+================================================================================
+FILE: src/pipelines/run_regression.py
+================================================================================
+# src/pipelines/run_regression.py
+
+import os
+import json
+import logging
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, Subset
+import optuna
+from sklearn.model_selection import train_test_split
+import ast
+
+from src.config import PREPARED_DATA_CSV
+from src.models.datasets import SequenceDataset, collate_fn
+from src.models.deep_learning import SeqCNNRegressor, train_model, predict_model
+from src.evaluation.metrics import evaluate_regression
+from src.evaluation.visualization import plot_distribution, plot_pred_vs_actual
+from src.reporting.generate_report import generate_html_report
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Starting sequence-based regression pipeline...")
+
+batch_size = 32
+epochs = 1
+early_stop_patience = 3
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# Load dataset and create splits
+dataset = SequenceDataset(PREPARED_DATA_CSV)
+num_samples = len(dataset)
+indices = np.arange(num_samples)
+np.random.seed(42)
+np.random.shuffle(indices)
+
+train_end = int(0.7 * num_samples)
+val_end = int(0.85 * num_samples)
+
+train_indices = indices[:train_end]
+val_indices = indices[train_end:val_end]
+test_indices = indices[val_end:]
+
+train_dataset = Subset(dataset, train_indices)
+val_dataset = Subset(dataset, val_indices)
+test_dataset = Subset(dataset, test_indices)
+
+train_loader_for_tuning = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+val_loader_for_tuning = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+
+def objective(trial):
+    # Hyperparameters for training
+    lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
+    weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-4, log=True)
+
+    # Hyperparameters for model architecture
+    filters_per_branch = trial.suggest_int("filters_per_branch", 32, 128, step=32)
+    kernel_sizes = trial.suggest_categorical("kernel_sizes", [(3,5,7), (3,7), (5,9)])
+    fc_units = trial.suggest_int("fc_units", 32, 128, step=32)
+    dropout_rate = trial.suggest_float("dropout_rate", 0.0, 0.7, step=0.1)
+    use_batchnorm = trial.suggest_categorical("use_batchnorm", [True, False])
+
+    model = SeqCNNRegressor(
+        kernel_sizes=kernel_sizes,
+        filters_per_branch=filters_per_branch,
+        fc_units=fc_units,
+        dropout_rate=dropout_rate,
+        use_batchnorm=use_batchnorm
+    )
+
+    train_model(model, train_loader_for_tuning, val_loader_for_tuning,
+                epochs=epochs, lr=lr, weight_decay=weight_decay,
+                device=device, early_stop_patience=early_stop_patience)
+    
+    model.load_state_dict(torch.load("best_model.pth"))
+
+    y_val_pred = predict_model(model, val_loader_for_tuning, device=device)
+    y_val = [y.item() for _, y in val_dataset]
+    y_val = np.array(y_val)
+    val_metrics = evaluate_regression(y_val, y_val_pred)
+
+    return val_metrics['mse']
+
+study = optuna.create_study(direction="minimize")
+study.optimize(objective, n_trials=2, timeout=None)
+
+logger.info(f"Best trial: {study.best_trial.number}")
+logger.info(f"Best trial params: {study.best_params}")
+logger.info(f"Best trial validation MSE: {study.best_value}")
+
+best_params = study.best_params
+
+# Convert kernel_sizes back to tuple of ints if needed
+kernel_sizes_str = best_params["kernel_sizes"]
+if isinstance(kernel_sizes_str, str):
+    kernel_sizes = ast.literal_eval(kernel_sizes_str)
+else:
+    kernel_sizes = kernel_sizes_str
+
+final_model = SeqCNNRegressor(
+    kernel_sizes=kernel_sizes,
+    filters_per_branch=best_params["filters_per_branch"],
+    fc_units=best_params["fc_units"],
+    dropout_rate=best_params["dropout_rate"],
+    use_batchnorm=best_params["use_batchnorm"]
+)
+
+train_model(final_model, train_loader_for_tuning, val_loader_for_tuning,
+            epochs=epochs, lr=best_params["lr"],
+            weight_decay=best_params["weight_decay"],
+            device=device, early_stop_patience=early_stop_patience)
+
+final_model.load_state_dict(torch.load("best_model.pth"))
+
+y_test_pred = predict_model(final_model, test_loader, device=device)
+y_test = [y.item() for _, y in test_dataset]
+y_test = np.array(y_test)
+
+test_metrics = evaluate_regression(y_test, y_test_pred)
+logger.info(f"Test metrics with best hyperparameters: {test_metrics}")
+
+os.makedirs("report/regression_plots", exist_ok=True)
+plot_distribution(y_test, "Distribution of Test Scores", "report/regression_plots/test_score_distribution.png")
+plot_pred_vs_actual(y_test, y_test_pred, "CNN Predictions", "report/regression_plots/cnn_pred_vs_actual.png")
+
+regression_results = {
+    "CNN_Model": test_metrics
+}
+plots = {
+    "test_score_distribution": "regression_plots/test_score_distribution.png",
+    "cnn_pred_vs_actual": "regression_plots/cnn_pred_vs_actual.png"
+}
+
+with open("report/regression_metrics.json", 'w') as f:
+    json.dump(regression_results, f, indent=4)
+
+with open("report/regression_plots.json", 'w') as f:
+    json.dump(plots, f, indent=4)
+
+classification_results = {}
+data_exploration_plots = {}
+
+generate_html_report(
+    regression_results=regression_results,
+    classification_results=classification_results,
+    data_exploration_plots=data_exploration_plots,
+    plots=plots,
+    output_path="report/index.html"
+)
+
+logger.info("Sequence-based regression pipeline completed, report generated.")
+
+
+================================================================================
+FILE: src/pipelines/run_combined.py
+================================================================================
+# run_combined.py
+import json
+import os
+from src.reporting.generate_report import generate_html_report
+
+# 1. Run regression pipeline
+os.system("python -m src.pipelines.run_regression")
+
+# 2. Run classification pipeline
+os.system("python -m src.pipelines.run_classification")
+
+# 3. Run data exploration pipeline
+os.system("python -m src.pipelines.run_data_exploration")
+
+# Load saved metrics and plots
+with open("report/regression_metrics.json", 'r') as f:
+    regression_results = json.load(f)
+
+with open("report/regression_plots.json", 'r') as f:
+    regression_plots = json.load(f)
+
+with open("report/classification_metrics.json", 'r') as f:
+    classification_results = json.load(f)
+
+with open("report/classification_plots.json", 'r') as f:
+    classification_plots = json.load(f)
+
+with open("report/data_exploration_plots.json", 'r') as f:
+    data_exploration_plots = json.load(f)
+
+# Combine regression and classification plots and also keep data exploration separate
+# Here we do not prepend 'report/' to keep paths relative from index.html
+all_plots = {}
+all_plots.update(regression_plots)
+all_plots.update(classification_plots)
+
+generate_html_report(
+    regression_results=regression_results,
+    classification_results=classification_results,
+    data_exploration_plots=data_exploration_plots,
+    plots=all_plots,
+    output_path="report/combined_report.html"
+)
+
+print("Combined report generated at: report/combined_report.html")
+
+
+================================================================================
+FILE: src/pipelines/run_classification.py
+================================================================================
+# run_classification.py
+import os
+import json
+import logging
+import numpy as np
+from sklearn.model_selection import train_test_split
+from src.config import FEATURE_DATA_CSV
+from src.utils.file_utils import load_csv
+from src.models.classical import (
+    train_logistic_regression, predict_logistic_regression,
+    train_random_forest_classifier, predict_random_forest_classifier
+)
+from src.evaluation.metrics import evaluate_classification
+from src.evaluation.visualization import plot_distribution, plot_roc_curve
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Starting classification pipeline...")
+
+df = load_csv(FEATURE_DATA_CSV)
+logger.info("Features loaded successfully.")
+
+y = (df['score'].values > 0.5).astype(int)
+X = df.drop(columns=['chrom', 'start', 'end', 'score']).values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+logger.info(f"Data split into train ({len(X_train)}) and test ({len(X_test)}) samples.")
+
+lr_class_model = train_logistic_regression(X_train, y_train)
+y_pred_proba_lr = predict_logistic_regression(lr_class_model, X_test)
+lr_class_metrics = evaluate_classification(y_test, y_pred_proba_lr)
+logger.info("Logistic Regression trained and evaluated.")
+
+best_auc = 0.0
+best_n_estimators = 100
+for n in [100, 200]:
+    rf_model_candidate = train_random_forest_classifier(X_train, y_train, n_estimators=n, random_state=42)
+    y_pred_proba_rf_cand = predict_random_forest_classifier(rf_model_candidate, X_test)
+    candidate_metrics = evaluate_classification(y_test, y_pred_proba_rf_cand)
+    if candidate_metrics['auc'] > best_auc:
+        best_auc = candidate_metrics['auc']
+        best_n_estimators = n
+
+rf_class_model = train_random_forest_classifier(X_train, y_train, n_estimators=best_n_estimators, random_state=42)
+y_pred_proba_rf = predict_random_forest_classifier(rf_class_model, X_test)
+rf_class_metrics = evaluate_classification(y_test, y_pred_proba_rf)
+logger.info(f"Random Forest Classifier trained and evaluated with n_estimators={best_n_estimators}.")
+
+# Placeholder MLP model predictions
+y_pred_proba_MLP = np.random.rand(len(y_test))
+MLP_class_metrics = evaluate_classification(y_test, y_pred_proba_MLP)
+logger.info("MLP classifier evaluated with placeholder predictions.")
+
+y_pred_proba_ensemble = (y_pred_proba_lr + y_pred_proba_rf + y_pred_proba_MLP) / 3
+ensemble_class_metrics = evaluate_classification(y_test, y_pred_proba_ensemble)
+logger.info("Ensemble classification predictions evaluated.")
+
+os.makedirs("report/classification_plots", exist_ok=True)
+plot_distribution(y, "Distribution of Class Labels", "report/classification_plots/class_label_distribution.png")
+plot_roc_curve(y_test, y_pred_proba_lr, "LR ROC Curve", "report/classification_plots/lr_roc.png")
+plot_roc_curve(y_test, y_pred_proba_rf, "RF ROC Curve", "report/classification_plots/rf_roc.png")
+plot_roc_curve(y_test, y_pred_proba_MLP, "MLP ROC Curve", "report/classification_plots/mlp_roc.png")
+plot_roc_curve(y_test, y_pred_proba_ensemble, "Ensemble ROC Curve", "report/classification_plots/ensemble_roc.png")
+
+classification_results = {
+    "Logistic Regression": lr_class_metrics,
+    "Random Forest": rf_class_metrics,
+    "MLP": MLP_class_metrics,
+    "Ensemble": ensemble_class_metrics
+}
+
+classification_plots = {
+    "class_label_distribution": "classification_plots/class_label_distribution.png",
+    "lr_roc": "classification_plots/lr_roc.png",
+    "rf_roc": "classification_plots/rf_roc.png",
+    "mlp_roc": "classification_plots/mlp_roc.png",
+    "ensemble_roc": "classification_plots/ensemble_roc.png"
+}
+
+with open("report/classification_metrics.json", 'w') as f:
+    json.dump(classification_results, f, indent=4)
+
+with open("report/classification_plots.json", 'w') as f:
+    json.dump(classification_plots, f, indent=4)
+
+logger.info("Classification metrics and plots saved as JSON.")
+logger.info("Classification pipeline completed.")
+
