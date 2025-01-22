@@ -14,3 +14,5 @@ Python-based toolkit designed to streamline epigenomic data analysis, particular
 **Comprehensive Reporting**: Automatic generation of HTML reports summarizing data exploration, model performance, explainability results, and motif discovery findings.
 
 [Multi-Branch_CNN_Regressor.pdf](https://github.com/user-attachments/files/18511413/Multi-Branch_CNN_Regressor.pdf)
+
+![Multi-Branch_CNN_Regressor](https://github.com/user-attachments/assets/a9bfdd2d-d345-4da4-9b7a-6423808f1ce0)
