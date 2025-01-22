@@ -12,3 +12,5 @@ Python-based toolkit designed to streamline epigenomic data analysis, particular
 **Explainability**: Integrated Gradients (IG) to interpret model predictions at the nucleotide level, and motif discovery to identify enriched sequence patterns influencing predictions.
 
 **Comprehensive Reporting**: Automatic generation of HTML reports summarizing data exploration, model performance, explainability results, and motif discovery findings.
+
+[Multi-Branch_CNN_Regressor.pdf](https://github.com/user-attachments/files/18511413/Multi-Branch_CNN_Regressor.pdf)
